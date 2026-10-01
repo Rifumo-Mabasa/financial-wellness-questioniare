@@ -19,6 +19,9 @@
 .option:hover{border-color:var(--gold);background:#FFFEFB}
 .option.active{border-color:var(--navy);background:var(--navy);color:#fff}
 .badge{font-size:10px;letter-spacing:.14em;font-weight:600;padding:6px 10px;border-radius:999px;border:1px solid}
+.cta-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+.cta-actions .btn{height:auto;min-height:48px;padding:8px 12px;text-align:center;line-height:1.35}
+@media(max-width:600px){.cta-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -37,6 +40,7 @@
     <div>© Financial Wellness Assessment • Private & confidential • No data stored server-side</div><div>FAIS • POPIA • Educational only</div>
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const CONCERN={
   death:{name:"Premature Death",purpose:"Your family needs instant, tax-efficient capital to clear debt and replace income — not sell assets under pressure.",action:"Private, portable structure owned by you personally. Typically 30–40% more cost-efficient than group cover, fully estate-friendly."},
@@ -145,8 +149,9 @@ function showResult(){
         <div>— Tax efficiency check: RA, TFSA, Endowment mix for your bracket</div>
         <div>— Estate flow check: will + beneficiaries + SARS</div>
       </div>
-      <div style="display:grid;gap:10px;margin-top:18px">
-        <a class="btn btn-primary" href="https://wa.me/?text=Hi%20I%20completed%20Financial%20Wellness%20Assessment%20Score%20${score}/100%20${cat.label}" target="_blank">Book on WhatsApp — Score ${score}/100 →</a>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="https://wa.me/27689484393?text=Hi%20Rifumo,%20I%20completed%20Financial%20Wellness%20Assessment%20-%20My%20Score%20is%20${score}" target="_blank" rel="noopener noreferrer">Book on WhatsApp — Score ${score}/100 →</a>
+        <button class="btn btn-ghost" onclick="downloadPDF(${score},'${cat.label}')">📄 Download My Summary PDF</button>
         <a class="btn btn-ghost" href="mailto:hello@example.com?subject=Wellness%20Gap%20Review%20${score}/100%20${cat.label}&body=Score:%20${score}%0AProfile:%20${QUESTIONS[0].o[answers[0]]}%0AGaps:%20${gaps.map(g=>CONCERN[g.q.c].name).join(',%20')}%0A%0AName:%0APractice:%0ABest%20time:">Email request with my score</a>
       </div>
       <div style="font-size:10px;opacity:.5;margin-top:14px;line-height:1.5">Educational only, not financial advice. Full FAIS needs analysis will be conducted. POPIA consent for assessment only.</div>
@@ -159,6 +164,119 @@ function copyLink(score,label){
   navigator.clipboard.writeText(window.location.href);
   alert("Link copied! Score: "+score+"/100 "+label+" - send this link, no personal data stored.");
 }
+function downloadPDF(score,label){
+  if(!window.jspdf?.jsPDF){
+    alert("The PDF library could not be loaded. Check your internet connection and try again.");
+    return;
+  }
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const pageWidth=doc.internal.pageSize.getWidth();
+  const pageHeight=doc.internal.pageSize.getHeight();
+  const margin=15;
+  const contentWidth=pageWidth-margin*2;
+  const categoryColors={FRAGILE:[220,38,38],EXPOSED:[217,119,6],RESILIENT:[22,163,74]};
+  let y=40;
+
+  function ensureSpace(height){
+    if(y+height>pageHeight-16){
+      doc.addPage();
+      y=18;
+    }
+  }
+
+  function writeParagraph(text,x,width,fontSize,lineHeight,color=[35,42,54]){
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(fontSize);
+    doc.setTextColor(...color);
+    const lines=doc.splitTextToSize(String(text),width);
+    lines.forEach(line=>{
+      ensureSpace(lineHeight);
+      doc.text(line,x,y);
+      y+=lineHeight;
+    });
+  }
+
+  function writeSectionLabel(text){
+    ensureSpace(8);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(9);
+    doc.setTextColor(15,30,58);
+    doc.text(text,margin,y);
+    y+=6;
+  }
+
+  doc.setFillColor(15,30,58);
+  doc.rect(0,0,pageWidth,29,"F");
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(14);
+  doc.setTextColor(201,169,97);
+  doc.text("Financial Wellness Assessment - The 5 Concerns Score",margin,18);
+
+  const scoreColor=categoryColors[label]||[15,30,58];
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(30);
+  doc.setTextColor(15,30,58);
+  doc.text(String(score),margin,54);
+  doc.setFontSize(12);
+  doc.setTextColor(90,98,110);
+  doc.text("/ 100",margin+22,54);
+  doc.setFontSize(12);
+  doc.setTextColor(...scoreColor);
+  doc.text(label,margin+42,54);
+  y=65;
+
+  writeSectionLabel("YOUR PROFILE");
+  writeParagraph("Profile: "+QUESTIONS[0].o[answers[0]],margin,contentWidth,10,5);
+  writeParagraph("Current Advisor: "+QUESTIONS[1].o[answers[1]],margin,contentWidth,10,5);
+  y+=5;
+
+  writeSectionLabel("TWO LOWEST-SCORING CONCERNS");
+  const lowestConcerns=QUESTIONS.slice(2,8)
+    .map((q,index)=>({q,questionIndex:index+2,pts:q.p[answers[index+2]]}))
+    .sort((a,b)=>a.pts-b.pts)
+    .slice(0,2);
+
+  lowestConcerns.forEach(gap=>{
+    const meta=CONCERN[gap.q.c];
+    ensureSpace(12);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(11);
+    doc.setTextColor(15,30,58);
+    doc.text(meta.name,margin,y);
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(9);
+    doc.setTextColor(90,98,110);
+    doc.text(gap.pts+" / "+Math.max(...gap.q.p)+" pts",pageWidth-margin,y,{align:"right"});
+    y+=6;
+    writeParagraph("Purpose: "+meta.purpose,margin,contentWidth,9,4.5);
+    writeParagraph("What Can Be Done: "+meta.action,margin,contentWidth,9,4.5);
+    y+=5;
+  });
+
+  ensureSpace(34);
+  doc.setDrawColor(201,169,97);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,pageWidth-margin,y);
+  y+=8;
+  writeSectionLabel("NEXT STEP: 20-MIN WELLNESS GAP REVIEW");
+  [
+    "Competitive comparison of your current cover and options for your profession",
+    "Tax efficiency review: RA, TFSA and Endowment",
+    "Estate flow check: will, beneficiaries and SARS"
+  ].forEach(item=>{
+    writeParagraph("- "+item,margin+2,contentWidth-2,9,5);
+  });
+  y+=4;
+  writeParagraph("Rifumo Mabasa | WhatsApp: +27 68 948 4393 | Score: "+score+"/100",margin,contentWidth,9,5,[15,30,58]);
+  y+=2;
+  writeParagraph("Educational only, not financial advice. A full FAIS needs analysis is required. POPIA applies; assessment responses are not sent to a server by this PDF download.",margin,contentWidth,7,3.5,[100,100,100]);
+
+  const safeLabel=String(label).toUpperCase().replace(/[^A-Z0-9]+/g,"-").replace(/^-|-$/g,"");
+  doc.save("Financial-Wellness-Score-"+score+"-"+safeLabel+".pdf");
+}
+window.downloadPDF=downloadPDF;
 window.copyLink=copyLink;
 </script>
 </body>
