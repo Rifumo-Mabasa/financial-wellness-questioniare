@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Wellness Assessment - The 5 Concerns Score</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0F1E3A;--gold:#C9A961;--cream:#FDF9EF;--paper:#FFFEFB;--ink:#111827}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui;background:var(--cream);color:var(--ink)}
+.serif{font-family:Fraunces,serif}
+.card{background:#fff;border:1px solid rgba(15,30,58,.1);border-radius:28px;box-shadow:0 20px 60px -24px rgba(15,30,58,.12)}
+.btn{height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px;cursor:pointer;transition:.2s;text-decoration:none}
+.btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:#162a52}
+.btn-ghost{background:var(--cream);border:1px solid rgba(15,30,58,.15);color:var(--navy)}
+.progress{height:4px;background:rgba(15,30,58,.08);border-radius:999px;overflow:hidden}
+.progress>div{height:100%;background:linear-gradient(90deg,var(--gold),#e8c87a);transition:.4s}
+.option{border:1.5px solid rgba(15,30,58,.1);border-radius:16px;padding:16px;cursor:pointer;transition:.15s;background:#fff}
+.option:hover{border-color:var(--gold);background:#FFFEFB}
+.option.active{border-color:var(--navy);background:var(--navy);color:#fff}
+.badge{font-size:10px;letter-spacing:.14em;font-weight:600;padding:6px 10px;border-radius:999px;border:1px solid}
+</style>
+</head>
+<body>
+<div style="max-width:960px;margin:0 auto;padding:24px">
+  <header style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid rgba(15,30,58,.1)">
+    <div><div class="serif" style="font-weight:600;letter-spacing:-.02em">Financial Wellness Assessment</div><div style="font-size:11px;opacity:.6;letter-spacing:.12em">THE 5 CONCERNS SCORE • SANDTON</div></div>
+    <div id="progressText" style="font-size:11px;opacity:.6">Q 1 / 9</div>
+  </header>
+  <div class="progress" style="margin:12px 0 24px"><div id="progressBar" style="width:11%"></div></div>
+  
+  <div id="app"></div>
+  
+  <div id="result" style="display:none"></div>
+  
+  <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(15,30,58,.1);font-size:10px;opacity:.5;line-height:1.6;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>© Financial Wellness Assessment • Private & confidential • No data stored server-side</div><div>FAIS • POPIA • Educational only</div>
+  </div>
+</div>
+<script>
+const CONCERN={
+  death:{name:"Premature Death",purpose:"Your family needs instant, tax-efficient capital to clear debt and replace income — not sell assets under pressure.",action:"Private, portable structure owned by you personally. Typically 30–40% more cost-efficient than group cover, fully estate-friendly."},
+  illness:{name:"Critical Illness",purpose:"A lump sum to focus on recovery, not invoices — covering 12 months off plus costs medical aid doesn't.",action:"Own-occupation definitions for medical professionals. Pays on early-stage diagnosis, not just late-stage."},
+  disability:{name:"Disability — Own Occupation",purpose:"Your ability to work in YOUR exact profession is your biggest asset. Protect the income engine.",action:"True own-occupation cover to age 65, with no offsets. Built for hands, eyes, specialist skills."},
+  income:{name:"Loss of Income",purpose:"Continuity without debt — maintaining life for 6 months if income stops.",action:"Structure cash vs protection so you don't hold too much cash losing to inflation, but still sleep."},
+  retirement:{name:"Retirement — Life After Work",purpose:"RA reduces tax now + preserves, TFSA tax-free for life, Unit Trusts flexible before 55, Endowment for >30% taxpayers & estate.",action:"Tax-bracket-specific mix so SARS funds part of retirement. Clear target income at 65."},
+  preservation:{name:"Preservation & Estate Flow",purpose:"Wealth must reach family quickly — without delays, legal fees, or SARS deductions.",action:"Will + beneficiary + estate tax efficiency aligned in one view."}
+};
+
+const QUESTIONS=[
+{k:"Q1 / Profile",t:"Which best describes you?",s:"Tailors benchmark for Sandton medical & young professionals.",o:["Medical intern / Community Service / MO","Registrar / Specialist training","Young professional — 0 to 5 years","Other professional"],p:[0,0,0,0],c:null},
+{k:"Q2 / Current Advice",t:"Do you currently have a financial advisor?",o:["No one","Bank advisor","Independent, but inactive 12m+","Active independent advisor"],p:[0,0,0,0],c:null},
+{k:"Concern 1 of 5",t:"If you passed away prematurely tomorrow, what would the financial implication be for those who depend on you?",o:["Immediate crisis — they wouldn't manage","Few months, then sell assets / downgrade lifestyle","Okay for 12 months but long-term goals lost","Secure — debts cleared, income replaced"],p:[0,4,8,15],c:"death"},
+{k:"Concern 2 of 5",t:"If diagnosed with critical illness needing 12 months off + major costs not covered by medical aid, how would you fund it?",o:["Debt / family help / wipe savings","Some savings but destroys everything built","Survive but set back years","Specific buffer pays lump sum, focus on recovery"],p:[0,4,8,15],c:"illness"},
+{k:"Concern 3 of 5",t:"Your ability to work in YOUR profession is your biggest asset. If you could never perform YOUR exact job again?",o:["No plan — don't know what happens","Employer covers small amount short time","Some income but nowhere near enough","Income protected in OWN profession until retirement"],p:[0,4,8,15],c:"disability"},
+{k:"Concern 4 of 5",t:"If your income stopped for 6 months starting tomorrow...",o:["Debt within 30 days","Last 2–3 months then debt","Last 6 months cutting everything","Maintain life 6+ months, no stress"],p:[0,4,8,15],c:"income"},
+{k:"Concern 5 of 5",t:"Are you truly prepared for life after retirement? What lifestyle could you maintain at 65 at current pace?",o:["Haven't started / hoping it works out","Saving something but no idea what it gives me","Saving but not on track to maintain lifestyle","Know income needed and clear tax-efficient plan on track"],p:[0,4,8,15],c:"retirement"},
+{k:"Preservation",t:"If something happened, would your plan actually reach your family quickly without delays, legal fees, SARS?",o:["No will / family doesn't know where anything is","Old will, not updated since earning/kids","Have will but not sure beneficiaries correct","Valid will, beneficiaries correct, tax-efficient"],p:[0,3,5,8],c:"preservation"},
+{k:"Competitiveness",t:"When last was what you have in place competitively compared for YOUR profession and tax bracket?",o:["Never","When started internship / first job","Over a year ago","In last 12 months"],p:[0,3,6,10],c:null},
+];
+
+let idx=0; let answers=Array(QUESTIONS.length).fill(null);
+const app=document.getElementById('app');
+const result=document.getElementById('result');
+const pBar=document.getElementById('progressBar');
+const pText=document.getElementById('progressText');
+
+function render(){
+  const q=QUESTIONS[idx];
+  pBar.style.width=((idx+1)/QUESTIONS.length*100)+"%";
+  pText.textContent=`Q ${idx+1} / ${QUESTIONS.length}`;
+  let opts=q.o.map((label,i)=>{
+    const active=answers[idx]===i?"active":"";
+    return `<div class="option ${active}" onclick="pick(${i})"><div style="display:flex;justify-content:space-between;gap:12px"><span style="font-size:14px;font-weight:500">${label}</span><span style="font-size:11px;opacity:.7">${q.p[i]} pts</span></div></div>`;
+  }).join("");
+  app.innerHTML=`
+  <div class="card" style="padding:28px">
+    <div style="display:flex;gap:10px;align-items:center"><span class="badge" style="border-color:rgba(201,169,97,.3);background:rgba(201,169,97,.12);color:#8a6d2b">${q.k}</span>${q.c?`<span class="badge" style="border-color:rgba(15,30,58,.1)">${CONCERN[q.c]?.name||q.c}</span>`:""}</div>
+    <h1 class="serif" style="margin:18px 0 8px;font-size:28px;line-height:1.15;max-width:22ch">${q.t}</h1>
+    ${q.s?`<div style="font-size:13px;opacity:.65;margin-bottom:20px">${q.s}</div>`:""}
+    <div style="display:grid;gap:10px">${opts}</div>
+    <div style="display:flex;gap:12px;margin-top:22px">
+      <button class="btn btn-ghost" style="flex:1" onclick="prev()" ${idx===0?"disabled style='opacity:.4'":""}>Back</button>
+      <button class="btn btn-primary" style="flex:1.4" onclick="next()">${idx===QUESTIONS.length-1?"See My Score →":"Continue →"}</button>
+    </div>
+    <div style="margin-top:16px;font-size:11px;opacity:.5">Educational only • No data stored • FAIS compliant language</div>
+  </div>`;
+}
+
+window.pick=function(i){answers[idx]=i;render();}
+window.prev=function(){if(idx>0){idx--;render();}}
+window.next=function(){
+  if(answers[idx]===null){alert("Pick an option to continue");return;}
+  if(idx<QUESTIONS.length-1){idx++;render();}else{showResult();}
+}
+
+function showResult(){
+  let raw=0; let max=0; let breakdown=[];
+  QUESTIONS.forEach((q,i)=>{
+    if(answers[i]!==null){raw+=q.p[answers[i]]; breakdown.push({q,pts:q.p[answers[i]],ans:q.o[answers[i]]});}
+    max+=Math.max(...q.p);
+  });
+  let score=Math.round((raw/max)*100);
+  let cat=score>=75?{label:"RESILIENT",color:"#16a34a",desc:"Well prepared. Minor optimisation to make it bulletproof."}:score>=50?{label:"EXPOSED",color:"#d97706",desc:"You have something, but employer-tied and not competitively compared. 2-3 critical gaps."}:{label:"FRAGILE",color:"#dc2626",desc:"High exposure. Earning well but one event could undo years."};
+  // gaps = lowest scoring concerns
+  let gaps=breakdown.filter(b=>b.q.c).sort((a,b)=>a.pts - b.pts).slice(0,2);
+  
+  app.style.display="none";
+  result.style.display="block";
+  result.innerHTML=`
+  <div style="display:grid;gap:20px">
+    <div class="card" style="padding:28px;text-align:center">
+      <div style="width:120px;height:120px;margin:0 auto;border-radius:50%;border:6px solid ${cat.color};display:flex;align-items:center;justify-content:center;flex-direction:column">
+        <div style="font-size:32px;font-weight:700" class="serif">${score}</div><div style="font-size:10px;letter-spacing:.14em">/100</div>
+      </div>
+      <div style="margin-top:16px"><span class="badge" style="background:${cat.color}15;border-color:${cat.color}30;color:${cat.color}">${cat.label}</span></div>
+      <h2 class="serif" style="font-size:24px;margin:14px 0 8px">Your Financial Wellness Score is ${score}/100 — ${cat.label}</h2>
+      <p style="font-size:13px;opacity:.7;max-width:48ch;margin:0 auto;line-height:1.6">${cat.desc}</p>
+      <div style="margin-top:18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" style="padding:0 20px" onclick="copyLink(${score},'${cat.label}')">Copy Link to Share</button>
+        <a class="btn btn-ghost" style="padding:0 20px" href="#book">Book Gap Review ↓</a>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px">
+      <div style="font-size:11px;letter-spacing:.14em;font-weight:600">YOUR BIGGEST GAPS</div>
+      <div style="display:grid;gap:12px;margin-top:14px">
+        ${gaps.map(g=>{
+          const meta=CONCERN[g.q.c];
+          return `<div style="border:1px solid rgba(15,30,58,.12);border-radius:18px;padding:16px;background:#FFFEFB">
+          <div style="display:flex;justify-content:space-between"><div style="font-weight:600" class="serif">${meta.name}</div><div style="font-size:11px;opacity:.6">${g.pts}/${g.q.p.reduce((a,b)=>Math.max(a,b),0)} pts</div></div>
+          <div style="margin-top:10px"><div style="font-size:10px;letter-spacing:.12em;font-weight:600;color:#C9A961">PURPOSE</div><div style="font-size:13px;opacity:.8;margin-top:4px;line-height:1.5">${meta.purpose}</div></div>
+          <div style="margin-top:10px"><div style="font-size:10px;letter-spacing:.12em;font-weight:600;opacity:.5">WHAT CAN BE DONE</div><div style="font-size:13px;opacity:.7;margin-top:4px;line-height:1.5">${meta.action}</div></div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <div id="book" class="card" style="padding:24px;border-color:rgba(201,169,97,.4)">
+      <div style="width:40px;height:40px;border-radius:12px;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center">✦</div>
+      <h3 class="serif" style="font-size:22px;margin:14px 0 8px">Book Your 20-min Wellness Gap Review</h3>
+      <p style="font-size:13px;opacity:.7;line-height:1.6">Competitive comparison of what you have vs what's possible, with numbers not products. FAIS needs analysis included.</p>
+      <div style="margin-top:16px;font-size:12px;line-height:1.6">
+        <div>— What you have now in rands vs market for your profession</div>
+        <div>— Tax efficiency check: RA, TFSA, Endowment mix for your bracket</div>
+        <div>— Estate flow check: will + beneficiaries + SARS</div>
+      </div>
+      <div style="display:grid;gap:10px;margin-top:18px">
+        <a class="btn btn-primary" href="https://wa.me/?text=Hi%20I%20completed%20Financial%20Wellness%20Assessment%20Score%20${score}/100%20${cat.label}" target="_blank">Book on WhatsApp — Score ${score}/100 →</a>
+        <a class="btn btn-ghost" href="mailto:hello@example.com?subject=Wellness%20Gap%20Review%20${score}/100%20${cat.label}&body=Score:%20${score}%0AProfile:%20${QUESTIONS[0].o[answers[0]]}%0AGaps:%20${gaps.map(g=>CONCERN[g.q.c].name).join(',%20')}%0A%0AName:%0APractice:%0ABest%20time:">Email request with my score</a>
+      </div>
+      <div style="font-size:10px;opacity:.5;margin-top:14px;line-height:1.5">Educational only, not financial advice. Full FAIS needs analysis will be conducted. POPIA consent for assessment only.</div>
+    </div>
+  </div>`;
+}
+
+render();
+function copyLink(score,label){
+  navigator.clipboard.writeText(window.location.href);
+  alert("Link copied! Score: "+score+"/100 "+label+" - send this link, no personal data stored.");
+}
+window.copyLink=copyLink;
+</script>
+</body>
+</html>
